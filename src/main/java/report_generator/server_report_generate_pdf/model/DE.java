@@ -9,7 +9,7 @@ import java.sql.Date;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@XmlRootElement(name = "DE")
+@XmlRootElement(name = "rDE", namespace = "http://ekuatia.set.gov.py/sifen/xsd")
 public class DE {
 
     @XmlElement(name = "dDVId")

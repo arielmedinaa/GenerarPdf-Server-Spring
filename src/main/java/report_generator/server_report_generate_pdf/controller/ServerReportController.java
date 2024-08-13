@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
-import service.ExtraerDatosService;
+import report_generator.server_report_generate_pdf.service.ExtraerDatosService;
 
 import java.io.ByteArrayOutputStream;
 
@@ -35,6 +35,7 @@ public class ServerReportController {
                     .body(pdfStream.toByteArray());
         }
         catch (Exception e){
+            System.out.println(e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);

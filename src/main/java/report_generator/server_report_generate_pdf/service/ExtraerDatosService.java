@@ -1,4 +1,4 @@
-package service;
+package report_generator.server_report_generate_pdf.service;
 
 import net.sf.jasperreports.engine.util.JRLoader;
 import org.springframework.stereotype.Service;
@@ -11,6 +11,7 @@ import jakarta.xml.bind.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,52 +20,59 @@ public class ExtraerDatosService {
 
     private final String BASE_PATH = "G:/Server-report/Reports/";
 
+
+
     public ByteArrayOutputStream generarReporte(String ruc, String codEst, String codExp, String reportType) throws JRException, JAXBException {
-        String reporteDir = BASE_PATH + ruc + "/" + codEst + "/" + codExp + "/factura/" + reportType + "/";
+        String reporteDir = BASE_PATH + ruc + "/" + codEst + "/" + codExp + "/" + reportType + "/";
         String reportePath;
         String xmlPath;
-        if (reportType.equals("factura")){
+        if (reportType.equals("factura")) {
             reportePath = reporteDir + "DE_FAC.jasper";
             xmlPath = reporteDir + "DE.xml";
-        }else {
+            System.out.println(xmlPath);
+        } else {
             reportePath = reporteDir + "DE.jasper";
             xmlPath = reporteDir + "NC.xml";
         }
-        //String reportePath = reporteDir + "DE_FAC.jasper";  // Nombre del archivo Jasper
-        Object datosExtraidos = parseXml(xmlPath, reportType);
 
-        JRXmlDataSource xmlDataSource = new JRXmlDataSource(new File(xmlPath), "/root");
-        Map<String, Object> parametros = mapearParametros(datosExtraidos, reportType);
+        DE de = (DE) parseXml(xmlPath);
+            JRXmlDataSource xmlDataSource = new JRXmlDataSource(new File(xmlPath), "/root");
+            Map<String, Object> parametros = mapearParametros(de, reportType);
 
-        JasperReport jasperReport = (JasperReport) JRLoader.loadObject(new File(reportePath));
-        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, xmlDataSource);
+            JasperReport jasperReport = (JasperReport) JRLoader.loadObject(new File(reportePath));
+            JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, xmlDataSource);
 
-        ByteArrayOutputStream pdfStream = new ByteArrayOutputStream();
-        JasperExportManager.exportReportToPdfStream(jasperPrint, pdfStream);
+            ByteArrayOutputStream pdfStream = new ByteArrayOutputStream();
+            JasperExportManager.exportReportToPdfStream(jasperPrint, pdfStream);
 
-        return pdfStream;
-    }
-    private Object parseXml(String xmlFilePath, String reportType) throws JAXBException {
-        JAXBContext context;
-        switch (reportType) {
-            case "DE":
-                context = JAXBContext.newInstance(DE.class);
-                break;
-            //case "NC":
-            //    context = JAXBContext.newInstance(NC.class);
-            //    break;
-            default:
-                throw new IllegalArgumentException("Tipo de reporte no soportado: " + reportType);
+            return pdfStream;
         }
-        Unmarshaller unmarshaller = context.createUnmarshaller();
-        return unmarshaller.unmarshal(new File(xmlFilePath));
-    }
+        public void printXml(Object obj) throws JAXBException {
+            JAXBContext context = JAXBContext.newInstance(obj.getClass());
+            Marshaller marshaller = context.createMarshaller();
+            marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
 
-    private Map<String, Object> mapearParametros(Object datosExtraidos, String reportType) {
-        Map<String, Object> parametros = new HashMap<>();
-        switch (reportType) {
-            case "DE":
-                DE deDatos = (DE) datosExtraidos;
+            StringWriter sw = new StringWriter();
+            marshaller.marshal(obj, sw);
+            System.out.println(sw.toString());
+        }
+
+        private Object parseXml (String xmlFilePath) throws JAXBException {
+            JAXBContext context = JAXBContext.newInstance(DE.class);
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            System.out.println("Proceso de unmarshaller" + xmlFilePath);
+            DE de = (DE) unmarshaller.unmarshal(new File(xmlFilePath));
+            if (de == null) {
+                throw new IllegalArgumentException("El objeto rDE es nulo después del unmarshalling.");
+            }
+            System.out.println("Unmarshalling exitoso: " + de);
+            return de;
+        }
+
+        private Map<String, Object> mapearParametros (DE deDatos, String reportType){
+            Map<String, Object> parametros = new HashMap<>();
+
+            if ("factura".equals(reportType)) {
                 parametros.put("cdc", deDatos.cdc);
                 parametros.put("rucEmi", deDatos.getRucEmi()); // Concatenación de rucSinDv y rucConDv
                 parametros.put("timbrado", deDatos.timbrado);
@@ -76,7 +84,7 @@ public class ExtraerDatosService {
                 parametros.put("condicion", deDatos.condicion);
                 parametros.put("moneda", deDatos.moneda);
                 parametros.put("cambio", deDatos.cambio);
-                parametros.put("cambioIte", deDatos.cambioIte); // Asegúrate de que el nombre del campo sea correcto en el XML
+                parametros.put("cambioIte", deDatos.cambioIte);
                 parametros.put("cdcAsoc", deDatos.cdcAsoc);
                 parametros.put("rucCli", deDatos.rucCli);
                 parametros.put("cliNom", deDatos.cliNom);
@@ -93,7 +101,7 @@ public class ExtraerDatosService {
                 parametros.put("descuento", deDatos.descuento);
                 parametros.put("descuentoMe", deDatos.descuentoMe);
                 parametros.put("kude", deDatos.kude);
-                parametros.put("cuotas", deDatos.cuotas); // Verifica que esté correctamente mapeado en el XML
+                parametros.put("cuotas", deDatos.cuotas);
                 parametros.put("tipdocAsoc", deDatos.tipdocAsoc);
                 parametros.put("tipDE", deDatos.tipDE);
                 parametros.put("rucDv", deDatos.rucDv);
@@ -121,10 +129,10 @@ public class ExtraerDatosService {
                 parametros.put("totexeme", deDatos.totexeme);
                 parametros.put("totgra10me", deDatos.totgra10me);
                 parametros.put("totgra5me", deDatos.totgra5me);
-                break;
-            default:
+            } else {
                 throw new IllegalArgumentException("Tipo de reporte no soportado: " + reportType);
+            }
+            System.out.println(parametros);
+            return parametros;
         }
-        return parametros;
-    }
 }
